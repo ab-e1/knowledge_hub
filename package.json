@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/ab-e1/knowledge_hub#readme",
   "dependencies": {
+    "@prisma/client": "^7.10.0",
     "argon2": "^0.45.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "jest": "^30.5.1",
+    "prisma": "^7.10.0",
     "supertest": "^7.2.2"
   }
 }
