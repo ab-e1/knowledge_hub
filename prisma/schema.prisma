@@ -1,0 +1,132 @@
+// KnowledgeHub — Question & Answer Platform
+// Prisma schema (Prisma 7, new prisma-client generator)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  name          String
+  email         String   @unique
+  password      String
+  bio           String?
+  avatarUrl     String?
+  role          Role     @default(USER)
+  isBlocked     Boolean  @default(false)
+  emailVerified Boolean  @default(false)
+  reputation    Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  questions     Question[]
+  answers       Answer[]
+  comments      Comment[]
+  votes         Vote[]
+  refreshTokens RefreshToken[]
+}
+
+model Question {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  authorId    Int
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  acceptedAnswerId Int?    @unique
+  acceptedAnswer   Answer? @relation("AcceptedAnswer", fields: [acceptedAnswerId], references: [id])
+
+  answers      Answer[]
+  comments     Comment[]
+  votes        Vote[]
+  questionTags QuestionTag[]
+}
+
+model Answer {
+  id         Int      @id @default(autoincrement())
+  content    String
+  authorId   Int
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  acceptedFor Question? @relation("AcceptedAnswer")
+
+  comments Comment[]
+  votes    Vote[]
+}
+
+model Comment {
+  id         Int       @id @default(autoincrement())
+  content    String
+  authorId   Int
+  author     User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  questionId Int?
+  question   Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answerId   Int?
+  answer     Answer?   @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+}
+
+model Vote {
+  id         Int       @id @default(autoincrement())
+  type       VoteType
+  voterId    Int
+  voter      User      @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  questionId Int?
+  question   Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answerId   Int?
+  answer     Answer?   @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+
+  @@unique([voterId, questionId])
+  @@unique([voterId, answerId])
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  questionTags QuestionTag[]
+}
+
+model QuestionTag {
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  tagId      Int
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([questionId, tagId])
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+}
