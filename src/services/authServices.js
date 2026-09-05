@@ -1,12 +1,17 @@
 import { prisma } from "../config/prisma.js";
 import {
   signAccessToken,
+  signEmailVerficationToken,
+  signPasswordResetToken,
   signRefreshToken,
-  verifyAccessToken,
-  verifyRefreshToken,
+  verifyToken,
 } from "../utils/jwt.js";
 import { hashPassword, verifyPassword } from "../utils/hash.js";
 import { visibleInfo } from "../utils/response.js";
+import {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from "../utils/email.js";
 
 //register
 //
@@ -15,11 +20,10 @@ export const register = async (data) => {
     where: { email: data.email },
   });
   if (duplicate) {
-    //check for duplaicte email
     return {
       ok: false,
-      error: "email already been registered",
-      status: 401,
+      error: "email is already registered",
+      status: 409,
     };
   }
 
@@ -38,20 +42,15 @@ export const register = async (data) => {
       createdAt: true,
     },
   });
-  const token = signAccessToken(visibleInfo(user)); // creating teh short timed access token
-  const refreshToken = await prisma.refreshToken.create({
-    data: {
-      token: signRefreshToken(visibleInfo(user)), //creating teh refresh token that will be 7days long
-      userId: user.id,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    },
-  });
-
+  const token = signEmailVerficationToken(visibleInfo(user)); // creating teh short timed access token
+  const previewUrl = await sendVerificationEmail(user.email, token);
   return {
     ok: true,
-    data: user,
-    accessToken: token,
-    refreshToken: refreshToken,
+    data: {
+      user: visibleInfo(user),
+      message: "Verification email sent. Please verify your email to log in.",
+      previewUrl,
+    },
     status: 201,
   };
 };
@@ -77,7 +76,8 @@ export const login = async (data) => {
     //checking if email is verified
     return {
       ok: false,
-      error: "email not verified verify your email first",
+      error:
+        "Email not verified. Please verify your email first, or use resend verification to get a new link.",
       status: 401,
     };
   }
@@ -120,7 +120,7 @@ export const refreshToken = async (refreshToken) => {
   }
   let decoded;
   try {
-    decoded = verifyRefreshToken(refreshToken); //verfiying the register token beofr chekcing teh exired dat , ro whether if it is revoked
+    decoded = verifyToken(refreshToken); //verfiying the register token beofr chekcing teh exired dat , ro whether if it is revoked
   } catch (err) {
     return {
       ok: false,
@@ -140,7 +140,7 @@ export const refreshToken = async (refreshToken) => {
   ) {
     return {
       ok: false,
-      error: "token is reviked or expired, please login in again",
+      error: "Token is revoked or expired. Please log in again.",
       status: 401,
     };
   }
@@ -165,7 +165,7 @@ export const logout = async (refreshToken) => {
   }
   let decoded;
   try {
-    decoded = verifyRefreshToken(refreshToken); //verfiying the refresh token before revokingit in db
+    decoded = verifyToken(refreshToken); //verfiying the refresh token before revokingit in db
   } catch (err) {
     return {
       ok: false,
@@ -184,7 +184,7 @@ export const logout = async (refreshToken) => {
   ) {
     return {
       ok: false,
-      error: "token already expired or reocker, you are logged out ",
+      error: "Token already expired or revoked. You are logged out.",
       status: 400,
     };
   }
@@ -193,42 +193,56 @@ export const logout = async (refreshToken) => {
     data: { revokedAt: new Date() },
   });
 
-  return { ok: true, data: "succesfully logged out", status: 200 };
+  return {
+    ok: true,
+    data: { message: "Successfully logged out." },
+    status: 200,
+  };
 };
 
 export const verifyEmail = async (token) => {
   if (!token) {
     return {
       ok: false,
-      error: " no token porvided",
+      error: "No token provided.",
       status: 400,
     };
   }
   let decoded;
   try {
-    decoded = verifyAccessToken(token);
+    decoded = verifyToken(token);
   } catch (err) {
     return {
       ok: false,
-      error: "invalid or expired token, email link is expired",
+      error:
+        "Invalid or expired token. Please request a new verification link.",
       status: 401,
     };
   }
 
+  // Enforce that this token is specifically an email verification token
+  if (decoded.type !== "email_verification") {
+    return {
+      ok: false,
+      error: "Invalid token type.",
+      status: 400,
+    };
+  }
+
   const user = await prisma.user.findUnique({
-    where: { email: decoded.userId },
+    where: { id: decoded.id },
   });
   if (!user) {
     return {
       ok: false,
-      error: "user not found",
+      error: "User not found.",
       status: 404,
     };
   }
   if (user.emailVerified) {
     return {
       ok: true,
-      error: "email is alrady verified you can log in",
+      data: { message: "Email is already verified. You can log in." },
       status: 200,
     };
   }
@@ -238,7 +252,128 @@ export const verifyEmail = async (token) => {
   });
   return {
     ok: true,
-    data: "you have succesully vefied you eamil, you can procceed with the login",
+    data: { message: "Email verified successfully. You can now log in." },
+    status: 200,
+  };
+};
+
+//resend email verification link
+
+export const resendVerification = async (email) => {
+  if (!email) {
+    return { ok: false, error: "email is required", status: 400 };
+  }
+  const user = await prisma.user.findUnique({
+    where: { email: email },
+  });
+
+  if (!user) {
+    return {
+      ok: true,
+      data: {
+        message: "If an account exists, a verification link has been sent.",
+      },
+      status: 200,
+    };
+  }
+  if (user.emailVerified) {
+    return { ok: false, error: "email is already verified", status: 400 };
+  }
+
+  const token = signEmailVerficationToken(visibleInfo(user));
+  const previewUrl = await sendVerificationEmail(user.email, token);
+
+  return {
+    ok: true,
+    data: { message: `verification link sent to your email.`, previewUrl },
+    status: 200,
+  };
+};
+
+export const forgotPassword = async (email) => {
+  if (!email) {
+    return { ok: false, error: "email is required", status: 400 };
+  }
+  const user = await prisma.user.findUnique({ where: { email: email } });
+  if (!user) {
+    return {
+      ok: true,
+      data: "if an an account exists with this email, a link has been sent to the email",
+      status: 200,
+    };
+  }
+  if (!user.emailVerified) {
+    const verifyTokenStr = signEmailVerficationToken({ userId: user.id });
+    const previewUrl = await sendVerificationEmail(user.email, verifyTokenStr);
+    return {
+      ok: true,
+      data: {
+        message:
+          "Account is not verified. We have resent a verification link to your email.",
+        previewUrl,
+      },
+      status: 200,
+    };
+  }
+  const token = signPasswordResetToken(visibleInfo(user));
+  const previewUrl = await sendPasswordResetEmail(email, token);
+
+  return {
+    ok: true,
+    data: {
+      message:
+        "a password reseting link has been sent to your email, enter you password and procceed",
+      previewUrl,
+    },
+    status: 200,
+  };
+};
+
+export const resetPassword = async (token, newPassword) => {
+  if (!token || !newPassword) {
+    return {
+      ok: false,
+      error: "Token and new password are required.",
+      status: 400,
+    };
+  }
+  let decoded;
+  try {
+    decoded = verifyToken(token);
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        "Invalid or expired token. Please request a new password reset link.",
+      status: 400,
+    };
+  }
+
+  // Enforce that this token is specifically a password reset token
+  if (decoded.type !== "password_reset") {
+    return {
+      ok: false,
+      error: "Invalid token type.",
+      status: 400,
+    };
+  }
+
+  const hash = await hashPassword(newPassword);
+
+  await prisma.user.update({
+    where: { id: decoded.id },
+    data: { password: hash },
+  });
+  await prisma.refreshToken.updateMany({
+    where: { userId: decoded.id, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  return {
+    ok: true,
+    data: {
+      message:
+        "Password reset successfully. Please log in with your new password.",
+    },
     status: 200,
   };
 };
