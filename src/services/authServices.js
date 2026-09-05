@@ -2,6 +2,7 @@ import { prisma } from "../config/prisma.js";
 import {
   signAccessToken,
   signRefreshToken,
+  verifyAccessToken,
   verifyRefreshToken,
 } from "../utils/jwt.js";
 import { hashPassword, verifyPassword } from "../utils/hash.js";
@@ -193,4 +194,46 @@ export const logout = async (refreshToken) => {
   });
 
   return { ok: true, data: "succesfully logged out", status: 200 };
+};
+
+export const verifyEmail = async (token) => {
+  if (!token) {
+    return {
+      ok: false,
+      error: " no token porvided",
+      status: 400,
+    };
+  }
+  let decoded;
+  try {
+    decoded = verifyAccessToken(token);
+  } catch (err) {
+    return {
+      ok: false,
+      error: "invalid or expired token, email link is expired",
+      status: 401,
+    };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: decoded.userId },
+  });
+  if (!user) {
+    return {
+      ok: false,
+      error: "user not found",
+      status: 404,
+    };
+  }
+  if (user.emailVerified) {
+    return {
+      ok: true,
+      error: "email is alrady verified you can log in",
+      status: 200,
+    };
+  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { emailVerified: true },
+  });
 };
