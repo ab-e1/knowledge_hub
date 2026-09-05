@@ -20,3 +20,15 @@ export const signRefreshToken = (payload) => {
 export const verifyRefreshToken = (refreshToken) => {
   return jwt.verify(refreshToken, jwtSecret);
 };
+
+export const signEmailVerficationToken = (payload) => {
+  return jwt.sign(payload, jwtSecret, {
+    expiresIn: "24h",
+  });
+};
+
+export const signPasswordResetToken = (payload) => {
+  return jwt.sign(payload, jwtSecret, {
+    expiresIn: "15m",
+  });
+};
