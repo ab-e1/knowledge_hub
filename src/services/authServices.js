@@ -236,4 +236,9 @@ export const verifyEmail = async (token) => {
     where: { id: user.id },
     data: { emailVerified: true },
   });
+  return {
+    ok: true,
+    data: "you have succesully vefied you eamil, you can procceed with the login",
+    status: 200,
+  };
 };
