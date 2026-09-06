@@ -6,7 +6,7 @@ export const roleCheck = (...allowedRoles) => {
       if (!allowedRoles.includes(req.user.role)) {
         return failure(
           res,
-          `not ahtorized it needs ine of this roles ${allowedRoles}`,
+          `Not authorized. Required role: ${allowedRoles.join(" or ")}.`,
         );
       }
       next();
