@@ -24,7 +24,27 @@ export const getProfile = async (userId) => {
   });
 
   if (!user) return { ok: false, error: "User not found.", status: 404 };
-  return { ok: true, data: user, status: 200 };
+
+  // Count accepted answers for this user
+  const acceptedAnswersCount = await prisma.answer.count({
+    where: {
+      authorId: userId,
+      acceptedFor: { isNot: null },
+    },
+  });
+
+  const { _count, ...rest } = user;
+
+  return {
+    ok: true,
+    data: {
+      ...rest,
+      questionsCount: _count.questions,
+      answersCount: _count.answers,
+      acceptedAnswersCount,
+    },
+    status: 200,
+  };
 };
 
 export const updateProfile = async (userId, data) => {
