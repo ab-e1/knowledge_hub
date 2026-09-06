@@ -1,4 +1,7 @@
 import express from "express";
+import helmet from "helmet";
+import cors from "cors";
+import { generalLimiter } from "./middleware/rateLimit.js";
 import authRoutes from "./routes/authRoute.js";
 import questionRoutes from "./routes/questionRoute.js";
 import answerRoutes from "./routes/answerRoute.js";
