@@ -12,3 +12,7 @@ export const smtpUser = process.env.SMTP_USER;
 export const smtpPass = process.env.SMTP_PASS;
 export const nodeEnv = process.env.NODE_ENV || "development";
 export const appUrl = process.env.APP_URL || `http://localhost:${port}`;
+export const cloudName = process.env.CLOUD_NAME.trim();
+export const apiKey = process.env.CLOUD_API_KEY?.trim();
+export const apiSecret = process.env.CLOUD_API_SECRET?.trim();
+export const avatarFolder = "knowledge_hub/users/avatars";
