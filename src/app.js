@@ -21,7 +21,7 @@ export const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: appUrl,
+    origin: appUrl || "http://localhost:4000",
     credentials: true,
   }),
 );
