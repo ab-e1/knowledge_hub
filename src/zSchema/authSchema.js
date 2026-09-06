@@ -28,5 +28,10 @@ export const loginSchema = z.object({
 });
 
 export const resetPassSchema = z.object({
-  password: passwordSchema,
+  token: z.string().optional(),
+  password: passwordSchema.optional(),
+  newPassword: passwordSchema.optional(),
+}).refine((data) => data.password || data.newPassword, {
+  message: "password (or newPassword) is required",
+  path: ["password"],
 });
