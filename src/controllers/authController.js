@@ -64,7 +64,8 @@ export const logout = async (req, res, next) => {
 
 export const verifyEmail = async (req, res, next) => {
   try {
-    const result = await authServices.verifyEmail(req.params.token);
+    const token = req.params.token || req.query.token;
+    const result = await authServices.verifyEmail(token);
     if (!result.ok) {
       return failure(res, result.error, result.status);
     }
@@ -100,10 +101,10 @@ export const forgotPassword = async (req, res, next) => {
 
 export const resetPassword = async (req, res, next) => {
   try {
-    const result = await authServices.resetPassword(
-      req.body.token,
-      req.body.password,
-    );
+    const token = req.body.token || req.query.token;
+    const newPassword = req.body.password || req.body.newPassword;
+
+    const result = await authServices.resetPassword(token, newPassword);
     if (!result.ok) {
       return failure(res, result.error, result.status);
     }
