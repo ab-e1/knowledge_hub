@@ -1,5 +1,6 @@
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
+import { appUrl, port } from "./loadEnv.js";
 
 const options = {
   definition: {
@@ -11,8 +12,12 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:3000",
+        url: appUrl || `http://localhost:${port}`,
         description: "Development Server",
+      },
+      {
+        url: "/",
+        description: "Current Domain / Server",
       },
     ],
     components: {
