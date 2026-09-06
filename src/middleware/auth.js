@@ -1,4 +1,4 @@
-import { verifyAccessToken } from "../utils/jwt.js";
+import { verifyToken } from "../utils/jwt.js";
 import { failure } from "../utils/response.js";
 
 export const auth = (req, res, next) => {
@@ -10,13 +10,14 @@ export const auth = (req, res, next) => {
 
   const bearer = header.split(" ")[1];
   try {
-    const token = verifyAccessToken(bearer);
+    const token = verifyToken(bearer);
     req.user = token;
     next();
   } catch (err) {
     failure(
       res,
       "invalid token or expired: refresh or login to get a new access token",
+      401,
     );
   }
 };
