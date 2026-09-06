@@ -63,6 +63,28 @@ router.post("/", auth, validate(answerSchema), answerController.createAnswer);
 
 /**
  * @swagger
+ * /api/v1/answers/{answerId}/accept:
+ *   patch:
+ *     summary: Mark/unmark an answer as accepted (Question author only, grants +15 reputation)
+ *     tags: [Answers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: answerId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Answer accepted or unaccepted successfully
+ *       403:
+ *         description: Only question author can accept answers
+ */
+router.patch("/:answerId/accept", auth, answerController.acceptAnswer);
+
+/**
+ * @swagger
  * /api/v1/answers/{answerId}:
  *   patch:
  *     summary: Update an answer
