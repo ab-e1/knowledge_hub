@@ -141,6 +141,7 @@ router.post("/logout", authController.logout);
  *       401:
  *         description: Invalid or expired token
  */
+router.get("/verify-email", authController.verifyEmail);
 router.get("/verify-email/:token", authController.verifyEmail);
 
 /**
