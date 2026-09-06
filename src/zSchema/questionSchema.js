@@ -10,3 +10,6 @@ export const questionSchema = z.object({
     .array(z.string().min(1, "tag cannot be empty"))
     .min(1, "at least one tag is required"),
 });
+
+// All fields optional for PATCH — only send what you want to change
+export const updateQuestionSchema = questionSchema.partial();
