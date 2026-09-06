@@ -59,3 +59,18 @@ export const deleteAnswer = async (req, res, next) => {
     next(err);
   }
 };
+
+export const acceptAnswer = async (req, res, next) => {
+  try {
+    const result = await answerService.acceptAnswer(
+      Number(req.user.id),
+      Number(req.params.answerId),
+    );
+    if (!result.ok) {
+      return failure(res, result.error, result.status);
+    }
+    return success(res, result.data, result.status);
+  } catch (err) {
+    next(err);
+  }
+};
