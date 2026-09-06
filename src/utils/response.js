@@ -15,8 +15,8 @@ export const success = (
   res.status(statusCode).json({
     ok: true,
     data,
-    accessToken,
-    refreshToken,
+    ...(accessToken && { accessToken }),
+    ...(refreshToken && { refreshToken }),
   });
 };
 
