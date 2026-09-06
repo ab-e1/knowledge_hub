@@ -3,6 +3,7 @@ import { createTransporter } from "../config/nodemailer.js";
 import { appUrl, nodeEnv } from "../config/loadEnv.js";
 
 export const sendVerificationEmail = async (email, token) => {
+  if (nodeEnv === "test" || process.env.NODE_ENV === "test") return;
   const verifyEmailUrl = `${appUrl}/api/v1/auth/verify-email?token=${token}`;
 
   const transporter = await createTransporter();
@@ -25,6 +26,7 @@ export const sendVerificationEmail = async (email, token) => {
 };
 
 export const sendPasswordResetEmail = async (email, token) => {
+  if (nodeEnv === "test" || process.env.NODE_ENV === "test") return;
   const resetUrl = `${appUrl}/api/v1/auth/reset-password?token=${token}`;
 
   const transporter = await createTransporter();
